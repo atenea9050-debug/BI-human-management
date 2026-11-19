@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Talento Humano IA · Analítica organizacional</title>
+  <meta name="description" content="Analítica de talento humano con procesamiento local y agentes de IA: clima, ausentismo, rotación, desempeño, capacitación y solicitudes.">
+
+  <!-- Tailwind CSS (build de navegador v4 por CDN, versión fija; sin paso de compilación).
+       Los tokens de color apuntan a variables CSS para soportar modo claro/oscuro automáticamente. -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.11/dist/index.global.js"></script>
+  <style type="text/tailwindcss">
+    @theme inline {
+      --color-bg: rgb(var(--c-bg));
+      --color-surface: rgb(var(--c-surface));
+      --color-soft: rgb(var(--c-soft));
+      --color-line: rgb(var(--c-line));
+      --color-ink: rgb(var(--c-ink));
+      --color-muted: rgb(var(--c-muted));
+      --color-brand: rgb(var(--c-brand));
+      --color-brand-ink: rgb(var(--c-brand-ink));
+      --font-sans: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --c-bg: 248 250 252; --c-surface: 255 255 255; --c-soft: 241 245 249; --c-line: 226 232 240; --c-ink: 15 23 42; --c-muted: 100 116 139; --c-brand: 37 99 235; --c-brand-ink: 255 255 255; }
+    @media (prefers-color-scheme: dark) {
+      :root { --c-bg: 11 18 32; --c-surface: 17 24 39; --c-soft: 30 41 59; --c-line: 51 65 85; --c-ink: 226 232 240; --c-muted: 148 163 184; --c-brand: 96 165 250; --c-brand-ink: 11 18 32; }
+    }
+    body { background: rgb(var(--c-bg)); color: rgb(var(--c-ink)); }
+    .dz-active { border-color: rgb(var(--c-brand)); background: rgb(var(--c-brand) / .08); }
+    .spinner { width: 14px; height: 14px; border: 2px solid rgb(var(--c-line)); border-top-color: rgb(var(--c-brand)); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    details > summary { cursor: pointer; list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
+    .prose-p p { margin-bottom: .75rem; line-height: 1.65; }
+    table.tbl { width: 100%; border-collapse: collapse; font-size: .8rem; }
+    table.tbl th { text-align: left; font-weight: 600; padding: .5rem .6rem; background: rgb(var(--c-soft)); white-space: nowrap; }
+    table.tbl td { padding: .5rem .6rem; border-top: 1px solid rgb(var(--c-line)); vertical-align: top; }
+    @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+  </style>
+  <!-- Librerías para gráficos y PDF (versiones fijas) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="font-sans antialiased">
+  <div class="mx-auto max-w-6xl px-4 py-6 sm:py-10">
+
+    <!-- Encabezado -->
+    <header class="mb-6">
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-brand-ink" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </span>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Talento Humano IA</h1>
+          <p class="text-sm text-muted">Clima, ausentismo, rotación, desempeño, capacitación y solicitudes internas — con alertas gerenciales e informe ejecutivo.</p>
+        </div>
+        <!-- Estado de la conexión con la IA: la clave NUNCA se muestra aquí (solo un resumen enmascarado) -->
+        <button id="aiBtn" type="button" class="ml-auto inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-2 text-sm font-medium hover:bg-soft" aria-haspopup="dialog" aria-controls="aiDialog">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span id="aiBtnDot" class="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true"></span><span id="aiBtnLabel">Vincular IA</span>
+        </button>
+      </div>
+      <ol class="mt-5 grid gap-2 text-xs text-muted sm:grid-cols-4" aria-label="Cómo funciona">
+        <li class="rounded-lg border border-line bg-surface p-3"><b class="text-ink">1 · Procesamiento local</b><br>Web Worker lee el CSV/Excel (hasta ~50 MB) sin congelar la pantalla.</li>
+        <li class="rounded-lg border border-line bg-surface p-3"><b class="text-ink">2 · Anonimización</b><br>Nombres, correos, cédulas y teléfonos se enmascaran en tu navegador.</li>
+        <li class="rounded-lg border border-line bg-surface p-3"><b class="text-ink">3 · 5 agentes Gemini</b><br>Reciben solo un resumen estadístico, no el archivo.</li>
+        <li class="rounded-lg border border-line bg-surface p-3"><b class="text-ink">4 · Informe</b><br>Dashboard adaptativo y PDF ejecutivo descargable.</li>
+      </ol>
+    </header>
+
+    <!-- Configuración + carga -->
+    <section class="grid gap-5 lg:grid-cols-5" aria-label="Configuración y carga de datos">
+      <div class="space-y-4 rounded-2xl border border-line bg-surface p-5 lg:col-span-2">
+        <h2 class="text-base font-semibold">1 · Contexto del análisis</h2>
+
+        <div>
+          <label for="context" class="mb-1 block text-sm font-medium">Contexto e intención <span class="font-normal text-muted">(opcional)</span></label>
+          <textarea id="context" rows="3" maxlength="1200" placeholder="Ej.: Empresa de manufactura con 3 plantas. Queremos entender por qué sube la rotación en producción." class="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand"></textarea>
+          <p class="mt-1 text-xs text-muted">Si lo dejas vacío, el Agente 1 deduce el sector y la naturaleza de los datos.</p>
+        </div>
+
+        <div class="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2.5 text-sm">
+          <span class="min-w-0"><span class="text-muted">Motor de análisis:</span> <b id="aiLine">—</b></span>
+          <button id="aiOpen" type="button" class="shrink-0 rounded-md border border-line px-2.5 py-1 text-xs font-medium hover:bg-soft">Configurar</button>
+        </div>
+
+        <p class="rounded-lg bg-soft p-3 text-xs text-muted"><b class="text-ink">Privacidad.</b> El archivo nunca sale de tu navegador. A Gemini solo viajan agregados y comentarios ya anonimizados. En el plan gratuito de Gemini, Google puede usar lo enviado para mejorar sus productos.</p>
+      </div>
+
+      <div class="space-y-4 rounded-2xl border border-line bg-surface p-5 lg:col-span-3">
+        <h2 class="text-base font-semibold">2 · Carga de datos</h2>
+        <label id="dropzone" for="fileInput" class="flex min-h-[150px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line p-6 text-center transition hover:border-brand">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-brand" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span class="text-sm font-medium">Arrastra tu archivo aquí o haz clic para seleccionarlo</span>
+          <span class="text-xs text-muted">CSV, TSV, XLSX o XLS · hasta ~50 MB · para Excel &gt; 25 MB se recomienda exportar a CSV</span>
+          <input id="fileInput" type="file" class="sr-only" accept=".csv,.tsv,.txt,.xlsx,.xlsm,.xls">
+        </label>
+        <div id="fileInfo" class="hidden items-center justify-between gap-3 rounded-lg bg-soft px-3 py-2 text-sm"></div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="analyzeBtn" type="button" class="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-brand-ink shadow-sm hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" disabled>
+            <span id="analyzeSpin" class="spinner hidden" aria-hidden="true"></span><span id="analyzeLabel">Analizar datos</span>
+          </button>
+          <button id="cancelBtn" type="button" class="hidden rounded-lg border border-line px-4 py-2.5 text-sm hover:bg-soft">Cancelar</button>
+        </div>
+
+        <div id="errorBox" class="hidden rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm" role="alert"></div>
+
+        <!-- Progreso del Web Worker -->
+        <div id="readPanel" class="hidden">
+          <div class="mb-1 flex items-center justify-between text-xs"><span id="readMsg" class="text-muted">Preparando…</span><span id="readPct" class="font-semibold">0%</span></div>
+          <div class="h-2.5 w-full overflow-hidden rounded-full bg-soft" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="readBarWrap">
+            <div id="readBar" class="h-full rounded-full bg-brand transition-all duration-200" style="width:0%"></div>
+          </div>
+        </div>
+        <div id="summaryCard" class="hidden rounded-lg border border-line p-3 text-xs"></div>
+      </div>
+    </section>
+
+    <!-- Pipeline de agentes -->
+    <section id="pipelineSection" class="mt-5 hidden rounded-2xl border border-line bg-surface p-5" aria-label="Estado de los agentes">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-base font-semibold">3 · El análisis paso a paso</h2>
+        <p class="text-xs text-muted">Primero se entiende el archivo; luego se miden los números y se leen los comentarios según lo que haya (en paralelo si hay ambos), y al final se cruza todo y se redacta el informe.</p>
+      </div>
+      <div id="pipeline" class="grid gap-3 md:grid-cols-5"></div>
+      <details class="mt-4 rounded-lg border border-line p-3">
+        <summary class="text-sm font-medium">Registro de ejecución</summary>
+        <pre id="logBox" class="mt-2 max-h-56 overflow-auto whitespace-pre-wrap text-xs text-muted"></pre>
+      </details>
+    </section>
+
+    <!-- Resultados -->
+    <section id="results" class="mt-8 hidden space-y-6" aria-label="Resultados"></section>
+
+    <footer class="mt-10 text-center text-xs text-muted">Las cifras provienen de cálculos deterministas en tu navegador; la IA interpreta y redacta, pero no calcula. Valida los hallazgos antes de decidir.</footer>
+  </div>
+
+  <!-- Diálogo de conexión con la IA: aquí (y solo aquí) se ingresa la API Key. Se vincula una vez y queda guardada cifrada. -->
+  <dialog id="aiDialog" class="m-auto w-[min(92vw,34rem)] rounded-2xl border border-line bg-surface p-0 text-ink backdrop:bg-black/60" aria-labelledby="aiDialogTitle">
+    <div class="space-y-4 p-5">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h2 id="aiDialogTitle" class="text-lg font-semibold">Conexión con Google AI Studio</h2>
+          <p class="text-xs text-muted">Se vincula una sola vez; la clave queda guardada en este navegador y no se muestra en pantalla.</p>
+        </div>
+        <button id="keyClose" type="button" class="rounded-md border border-line px-2 py-1 text-sm hover:bg-soft" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div id="keyState" class="rounded-lg bg-soft p-3 text-sm"></div>
+
+      <div>
+        <label for="keyInput" class="mb-1 block text-sm font-medium"><span id="keyInputLabel">API Key</span></label>
+        <div class="flex gap-2">
+          <input id="keyInput" name="gai-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pega aquí tu clave (AIza… o AQ.…)" class="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand">
+          <button id="keyToggle" type="button" class="rounded-lg border border-line px-3 text-sm hover:bg-soft" aria-label="Mostrar u ocultar lo que escribes">Ver</button>
+        </div>
+        <p class="mt-1 text-xs text-muted">¿No tienes una? <a class="underline" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Créala en Google AI Studio</a>. Se verifica con Google antes de guardarse.</p>
+      </div>
+
+      <div id="keyMsg" class="hidden rounded-lg border p-3 text-sm" role="status" aria-live="polite"></div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="keySave" type="button" class="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:opacity-90 disabled:opacity-50"><span id="keySpin" class="spinner hidden" aria-hidden="true"></span><span id="keySaveLabel">Verificar y guardar</span></button>
+        <button id="keyForget" type="button" class="hidden rounded-lg border border-red-500/50 px-4 py-2 text-sm text-red-600 hover:bg-red-500/10">Olvidar clave</button>
+      </div>
+
+      <details class="rounded-lg border border-line p-3">
+        <summary class="text-sm font-medium">Opciones avanzadas</summary>
+        <div class="mt-3 space-y-3">
+          <div>
+            <label for="models" class="mb-1 block text-xs font-medium">Modelos Gemini (principal, luego respaldos)</label>
+            <input id="models" type="text" class="w-full rounded-lg border border-line bg-bg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-brand" value="gemini-3.8-flash, gemini-3.6-flash, gemini-3.5-flash-lite">
+          </div>
+          <label class="flex items-start gap-2 text-sm"><input id="noAi" type="checkbox" class="mt-1"><span><b>Modo sin IA</b> (solo reglas locales): no se llama a Gemini; los agentes usan reglas deterministas.</span></label>
+        </div>
+      </details>
+
+      <p class="text-xs leading-relaxed text-muted"><b class="text-ink">Cómo se guarda.</b> Cifrada con AES-GCM en este navegador (clave de cifrado no exportable) y solo se envía a <code>generativelanguage.googleapis.com</code>. Aun así, quien use este perfil del navegador podría usarla: no la vincules en equipos compartidos y restríngela en Google AI Studio. Puedes borrarla cuando quieras con «Olvidar clave».</p>
+    </div>
+  </dialog>
+
+<script type="module">
+import { AgentsOrchestrator, AGENT_INFO, DEFAULT_MODELS, fmt, verifyApiKey } from './agentsOrchestrator.js';
+import { barsSpec, lineSpec } from './insights.js';
+import { exportReportPDF, chartConfig } from './pdfExporter.js';
+import { saveApiKey, loadApiKey, clearApiKey, getKeyMeta, maskKey, looksLikeApiKey, normalizeApiKey, migrateLegacySessionKey } from './keyVault.js';
+
+/* ============================== Utilidades de UI ============================== */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const els = {
+  context: $('context'), models: $('models'), noAi: $('noAi'),
+  aiBtn: $('aiBtn'), aiBtnDot: $('aiBtnDot'), aiBtnLabel: $('aiBtnLabel'), aiLine: $('aiLine'), aiOpen: $('aiOpen'),
+  aiDialog: $('aiDialog'), keyInput: $('keyInput'), keyToggle: $('keyToggle'), keySave: $('keySave'), keySaveLabel: $('keySaveLabel'), keySpin: $('keySpin'),
+  keyForget: $('keyForget'), keyClose: $('keyClose'), keyMsg: $('keyMsg'), keyState: $('keyState'), keyInputLabel: $('keyInputLabel'),
+  dropzone: $('dropzone'), fileInput: $('fileInput'), fileInfo: $('fileInfo'), analyzeBtn: $('analyzeBtn'), cancelBtn: $('cancelBtn'),
+  analyzeSpin: $('analyzeSpin'), analyzeLabel: $('analyzeLabel'), errorBox: $('errorBox'),
+  readPanel: $('readPanel'), readMsg: $('readMsg'), readPct: $('readPct'), readBar: $('readBar'), readBarWrap: $('readBarWrap'), summaryCard: $('summaryCard'),
+  pipelineSection: $('pipelineSection'), pipeline: $('pipeline'), logBox: $('logBox'), results: $('results'),
+};
+const state = { file: null, worker: null, controller: null, summary: null, result: null, charts: [], exCharts: [], explorer: null, explorerSelect: null, busy: false };
+const MAX_BYTES = 120 * 1024 * 1024;
+
+// Almacenamiento con tolerancia a fallos (modo privado, bloqueos)
+const store = {
+  get(area, k) { try { return window[area].getItem(k); } catch (_) { return null; } },
+  set(area, k, v) { try { window[area].setItem(k, v); } catch (_) { /* sin persistencia */ } },
+};
+const fmtBytes = (b) => (b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+
+/* ============================== Preferencias ============================== */
+els.models.value = store.get('localStorage', 'th_models') || DEFAULT_MODELS.join(', ');
+els.noAi.checked = store.get('localStorage', 'th_no_ai') === '1';
+els.context.value = store.get('sessionStorage', 'th_context') || '';
+els.models.addEventListener('change', () => store.set('localStorage', 'th_models', els.models.value));
+els.noAi.addEventListener('change', () => { store.set('localStorage', 'th_no_ai', els.noAi.checked ? '1' : '0'); refreshAiStatus(); });
+els.context.addEventListener('input', () => store.set('sessionStorage', 'th_context', els.context.value));
+
+/* ============================== Vinculación de la API Key (una sola vez) ==============================
+ * La clave se ingresa SOLO en el diálogo de configuración, se verifica con Google y se guarda cifrada
+ * (keyVault.js). En la interfaz solo aparece enmascarada; el campo se vacía tras guardar. */
+let pendingAnalyze = false;   // true si el diálogo se abrió porque faltaba la clave al pulsar "Analizar"
+
+function refreshAiStatus() {
+  const meta = getKeyMeta();
+  const noAi = els.noAi.checked;
+  let label, dot, line;
+  if (noAi) { label = 'Modo sin IA'; dot = 'bg-slate-400'; line = 'reglas locales (sin IA)'; }
+  else if (meta) { label = `IA vinculada · …${meta.last4}`; dot = 'bg-emerald-500'; line = 'Gemini (clave vinculada)'; }
+  else { label = 'Vincular IA'; dot = 'bg-amber-500'; line = 'sin vincular — configura tu API Key'; }
+  els.aiBtnLabel.textContent = label;
+  els.aiBtnDot.className = `h-2 w-2 rounded-full ${dot}`;
+  els.aiLine.textContent = line;
+
+  const when = meta && meta.savedAt ? new Date(meta.savedAt).toLocaleDateString('es-CO', { dateStyle: 'medium' }) : '';
+  if (meta) {
+    const how = meta.persisted === false ? 'Solo en memoria de esta pestaña: se perderá al cerrarla (el navegador bloquea el almacenamiento).'
+      : meta.encrypted ? 'Guardada cifrada (AES-GCM) en este navegador.'
+        : 'Guardada sin cifrar en este navegador (este contexto no permite cifrado; usa http://localhost o https).';
+    els.keyState.innerHTML = `<div class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-emerald-500"></span><b>Clave vinculada</b> <code class="rounded bg-bg px-1.5 py-0.5 text-xs">${esc(maskKey(meta))}</code></div><p class="mt-1 text-xs text-muted">${esc(how)}${when ? ` Vinculada el ${esc(when)}.` : ''}</p>`;
+    els.keyInputLabel.textContent = 'Reemplazar con otra API Key (opcional)';
+    els.keySaveLabel.textContent = 'Verificar y reemplazar';
+  } else {
+    els.keyState.innerHTML = '<div class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-amber-500"></span><b>Aún no hay una clave vinculada</b></div><p class="mt-1 text-xs text-muted">Pégala abajo una sola vez: quedará guardada y no tendrás que ingresarla en cada sesión.</p>';
+    els.keyInputLabel.textContent = 'API Key de Google AI Studio';
+    els.keySaveLabel.textContent = 'Verificar y guardar';
+  }
+  els.keyForget.classList.toggle('hidden', !meta);
+}
+
+function setKeyMsg(text, kind = 'info') {
+  const tone = { info: 'border-line bg-soft', ok: 'border-emerald-500/40 bg-emerald-500/10', warn: 'border-amber-500/50 bg-amber-500/10', error: 'border-red-500/40 bg-red-500/10' }[kind];
+  els.keyMsg.className = `rounded-lg border p-3 text-sm ${tone}`;
+  els.keyMsg.textContent = text;
+}
+function clearKeyMsg() { els.keyMsg.className = 'hidden'; els.keyMsg.textContent = ''; }
+function setKeyBusy(b) { els.keySave.disabled = b; els.keySpin.classList.toggle('hidden', !b); }
+const firstModel = () => els.models.value.split(',').map((s) => s.trim()).filter(Boolean)[0] || DEFAULT_MODELS[0];
+
+function openAiDialog({ pending = false, message = '', kind = 'info' } = {}) {
+  pendingAnalyze = pending;
+  refreshAiStatus();
+  if (message) setKeyMsg(message, kind); else clearKeyMsg();
+  if (!els.aiDialog.open) els.aiDialog.showModal();
+  setTimeout(() => els.keyInput.focus(), 50);
+}
+
+async function onSaveKey() {
+  const value = normalizeApiKey(els.keyInput.value);   // acepta también la línea completa de un .env ("GEMINI_API_KEY=…") o con comillas
+  if (!value) return setKeyMsg('Pega tu API Key para continuar.', 'warn');
+  if (!looksLikeApiKey(value)) return setKeyMsg('El formato no parece una API Key válida: debe ser una sola línea, sin espacios (por ejemplo «AIza…» o «AQ.…»).', 'error');
+  setKeyBusy(true); setKeyMsg('Verificando la clave con Google…', 'info');
+  try {
+    const check = await verifyApiKey(value, firstModel());
+    if (!check.ok && (check.reason === 'invalid' || check.reason === 'forbidden')) return setKeyMsg(check.message, 'error');
+    const meta = await saveApiKey(value);
+    els.keyInput.value = ''; els.keyInput.type = 'password'; els.keyToggle.textContent = 'Ver';
+    refreshAiStatus();
+    const tail = meta.persisted === false ? ' Atención: el navegador bloquea el almacenamiento, así que solo durará esta pestaña.' : '';
+    if (check.ok) setKeyMsg(`✓ Clave verificada y guardada.${check.warning ? ' ' + check.warning : ''}${tail}`, check.warning || tail ? 'warn' : 'ok');
+    else setKeyMsg(`Clave guardada, pero no se pudo verificar ahora: ${check.message}${tail}`, 'warn');
+    if (pendingAnalyze && els.noAi.checked) { els.noAi.checked = false; store.set('localStorage', 'th_no_ai', '0'); refreshAiStatus(); }
+    if (pendingAnalyze) { pendingAnalyze = false; setTimeout(() => { els.aiDialog.close(); analyze(); }, 700); }
+  } catch (e) {
+    setKeyMsg(e.message || 'No se pudo guardar la clave.', 'error');
+  } finally { setKeyBusy(false); }
+}
+
+els.aiBtn.addEventListener('click', () => openAiDialog());
+els.aiOpen.addEventListener('click', () => openAiDialog());
+els.keyClose.addEventListener('click', () => els.aiDialog.close());
+els.aiDialog.addEventListener('click', (e) => { if (e.target === els.aiDialog) els.aiDialog.close(); });
+els.aiDialog.addEventListener('close', () => { els.keyInput.value = ''; els.keyInput.type = 'password'; els.keyToggle.textContent = 'Ver'; pendingAnalyze = false; });
+els.keySave.addEventListener('click', onSaveKey);
+els.keyInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); onSaveKey(); } });
+els.keyToggle.addEventListener('click', () => {
+  const show = els.keyInput.type === 'password';
+  els.keyInput.type = show ? 'text' : 'password';
+  els.keyToggle.textContent = show ? 'Ocultar' : 'Ver';
+});
+els.keyForget.addEventListener('click', async () => {
+  if (!window.confirm('¿Olvidar la API Key de este navegador? Tendrás que volver a vincularla para usar la IA.')) return;
+  await clearApiKey();
+  refreshAiStatus();
+  setKeyMsg('La clave fue eliminada de este navegador.', 'ok');
+});
+
+// Migra una clave guardada por la versión anterior (sessionStorage) y pinta el estado inicial
+migrateLegacySessionKey().finally(refreshAiStatus);
+refreshAiStatus();
+
+/* ============================== Carga de archivo ============================== */
+function setFile(file) {
+  clearError();
+  if (!file) return;
+  if (!/\.(csv|tsv|txt|xlsx|xlsm|xls)$/i.test(file.name)) return showError('Formato no soportado. Usa CSV, TSV, XLSX o XLS.');
+  if (file.size === 0) return showError('El archivo está vacío.');
+  if (file.size > MAX_BYTES) return showError(`El archivo pesa ${fmtBytes(file.size)}. El límite recomendado es ~50 MB (máximo ${fmtBytes(MAX_BYTES)}).`);
+  state.file = file;
+  const warn = /\.(xlsx|xlsm|xls)$/i.test(file.name) && file.size > 25 * 1048576
+    ? '<span class="text-amber-600">Excel grande: puede consumir mucha memoria. Si falla, expórtalo a CSV.</span>' : '';
+  els.fileInfo.classList.remove('hidden'); els.fileInfo.classList.add('flex');
+  els.fileInfo.innerHTML = `<span class="truncate"><b>${esc(file.name)}</b> · ${fmtBytes(file.size)} ${warn}</span>
+    <button type="button" id="clearFile" class="shrink-0 rounded-md border border-line px-2 py-1 text-xs hover:bg-bg">Quitar</button>`;
+  $('clearFile').addEventListener('click', () => { state.file = null; els.fileInput.value = ''; els.fileInfo.classList.add('hidden'); els.fileInfo.classList.remove('flex'); els.analyzeBtn.disabled = true; });
+  els.analyzeBtn.disabled = false;
+}
+els.fileInput.addEventListener('change', (e) => setFile(e.target.files[0]));
+['dragenter', 'dragover'].forEach((ev) => els.dropzone.addEventListener(ev, (e) => { e.preventDefault(); els.dropzone.classList.add('dz-active'); }));
+['dragleave', 'drop'].forEach((ev) => els.dropzone.addEventListener(ev, (e) => { e.preventDefault(); els.dropzone.classList.remove('dz-active'); }));
+els.dropzone.addEventListener('drop', (e) => setFile(e.dataTransfer.files[0]));
+
+/* ============================== Errores y estado ============================== */
+function showError(msg, { offerNoAi = false, offerKey = false } = {}) {
+  els.errorBox.classList.remove('hidden');
+  els.errorBox.innerHTML = `<b>No se pudo completar:</b> ${esc(msg)}
+    ${offerKey ? '<button type="button" id="useKey" class="ml-2 rounded-md border border-line bg-surface px-2 py-1 text-xs hover:bg-soft">Actualizar API Key</button>' : ''}
+    ${offerNoAi ? '<button type="button" id="useNoAi" class="ml-2 rounded-md border border-line bg-surface px-2 py-1 text-xs hover:bg-soft">Continuar en modo sin IA</button>' : ''}`;
+  if (offerKey) $('useKey').addEventListener('click', () => openAiDialog({ pending: true, message: 'Ingresa una clave válida para reintentar el análisis.', kind: 'warn' }));
+  if (offerNoAi) $('useNoAi').addEventListener('click', () => { els.noAi.checked = true; els.noAi.dispatchEvent(new Event('change')); clearError(); analyze(); });
+}
+function clearError() { els.errorBox.classList.add('hidden'); els.errorBox.innerHTML = ''; }
+function setBusy(b) {
+  state.busy = b;
+  els.analyzeBtn.disabled = b || !state.file;
+  els.analyzeSpin.classList.toggle('hidden', !b);
+  els.analyzeLabel.textContent = b ? 'Analizando…' : 'Analizar datos';
+  els.cancelBtn.classList.toggle('hidden', !b);
+}
+function setReadProgress(pct, msg) {
+  els.readPanel.classList.remove('hidden');
+  els.readBar.style.width = `${pct}%`; els.readPct.textContent = `${pct}%`; els.readBarWrap.setAttribute('aria-valuenow', pct);
+  if (msg) els.readMsg.textContent = msg;
+}
+
+/* ============================== Web Worker ============================== */
+function runWorker(file) {
+  return new Promise((resolve, reject) => {
+    let worker;
+    try { worker = new Worker('./worker.js'); }
+    catch (e) { return reject(new Error('No se pudo iniciar el Web Worker. Abre la aplicación desde un servidor local (Live Server, http://localhost) y no con file://.')); }
+    state.worker = worker;
+    worker.onmessage = (ev) => {
+      const m = ev.data;
+      if (m.type === 'progress') setReadProgress(m.pct, m.message);
+      else if (m.type === 'result') { worker.terminate(); state.worker = null; resolve(m.summary); }
+      else if (m.type === 'error') { worker.terminate(); state.worker = null; const err = new Error(m.message); err.code = m.code; err.detail = m.detail; reject(err); }
+    };
+    worker.onerror = (e) => { worker.terminate(); state.worker = null; reject(new Error('Falló el Web Worker: ' + (e.message || 'no se pudo cargar worker.js') + '. Verifica que worker.js esté en la misma carpeta y que uses un servidor local.')); };
+    setReadProgress(0, 'Iniciando lectura local…');
+    worker.postMessage({ type: 'process', file });
+  });
+}
+
+function renderSummaryCard(s) {
+  const kb = new Blob([JSON.stringify(s)]).size;
+  const pii = s.processing.pii_masked_columns;
+  const types = {};
+  s.columns.forEach((c) => { types[c.type] = (types[c.type] || 0) + 1; });
+  els.summaryCard.classList.remove('hidden');
+  els.summaryCard.innerHTML = `
+    <div class="mb-1 font-semibold">Resumen local listo (${(s.processing.duration_ms / 1000).toFixed(1)} s)</div>
+    <div class="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+      <div>Registros: <b>${fmt(s.file.rows)}</b> · Columnas: <b>${s.file.columns}</b>${s.file.sheet ? ` · Hoja: <b>${esc(s.file.sheet)}</b>` : ''}</div>
+      <div>Tamaño del archivo: <b>${fmtBytes(s.file.size_bytes)}</b> → resumen para la IA: <b>${fmtBytes(kb)}</b></div>
+      <div>Medidas numéricas/tasas: <b>${s.evidence.quantitative.measures}</b> · Dimensiones: <b>${s.evidence.quantitative.dimensions}</b></div>
+      <div>Textos cualitativos: <b>${fmt(s.evidence.qualitative.texts_total)}</b> en <b>${s.evidence.qualitative.text_columns}</b> columna(s)</div>
+      <div class="sm:col-span-2">Datos personales enmascarados: <b>${pii.length}</b>${pii.length ? ' (' + esc(pii.map((p) => p.column).join(', ')) + ')' : ''} · Tipos: ${esc(Object.entries(types).map(([k, v]) => `${k} ${v}`).join(', '))}</div>
+      ${s.quality.notes.length ? `<div class="sm:col-span-2 text-muted">${s.quality.notes.map(esc).join(' ')}</div>` : ''}
+    </div>`;
+}
+
+/* ============================== Pipeline de agentes ============================== */
+const STATUS_UI = {
+  pending: ['Pendiente', 'bg-soft text-muted'], running: ['En curso', 'bg-brand/15 text-brand'], completed: ['Completado', 'bg-emerald-500/15 text-emerald-600'],
+  completed_with_warnings: ['Con avisos', 'bg-amber-500/15 text-amber-600'], skipped: ['Omitido', 'bg-slate-500/15 text-muted'],
+  failed: ['Falló', 'bg-red-500/15 text-red-600'], insufficient_data: ['Datos insuficientes', 'bg-amber-500/15 text-amber-600'],
+};
+function resetPipeline() {
+  els.pipelineSection.classList.remove('hidden');
+  els.logBox.textContent = '';
+  els.pipeline.innerHTML = Object.entries(AGENT_INFO).map(([k, a]) => `
+    <div id="ag_${k}" class="rounded-xl border border-line p-3">
+      <div class="flex items-center justify-between"><span class="text-xs font-semibold text-muted">AGENTE ${a.n}</span><span class="text-[10px] font-semibold" data-role="mode"></span></div>
+      <div class="mt-1 text-sm font-semibold leading-snug">${esc(a.friendly)}</div>
+      <div class="text-[11px] text-muted">${esc(a.name)}</div>
+      <div class="mt-2 flex items-center gap-2"><span data-role="chip" class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_UI.pending[1]}">${STATUS_UI.pending[0]}</span><span data-role="time" class="text-xs text-muted"></span></div>
+      <p data-role="note" class="mt-2 text-xs text-muted"></p>
+    </div>`).join('');
+}
+function updateAgent(ev) {
+  const card = $('ag_' + ev.key);
+  if (!card) return;
+  const [label, cls] = STATUS_UI[ev.status] || STATUS_UI.pending;
+  const chip = card.querySelector('[data-role=chip]');
+  chip.className = `inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${cls}`;
+  chip.innerHTML = (ev.status === 'running' ? '<span class="spinner"></span>' : '') + esc(label);
+  if (ev.mode) card.querySelector('[data-role=mode]').textContent = ev.mode === 'llm' ? 'IA · GEMINI' : ev.mode === 'rules' ? 'REGLAS' : '';
+  if (ev.duration_ms !== undefined && ev.status !== 'running') card.querySelector('[data-role=time]').textContent = ev.duration_ms ? `${(ev.duration_ms / 1000).toFixed(1)} s` : '';
+  const note = card.querySelector('[data-role=note]');
+  if (ev.status === 'skipped' || ev.status === 'failed') note.textContent = ev.message || '';
+  else if (ev.model) note.textContent = ev.model;
+}
+function onEvent(ev) {
+  if (ev.type === 'agent') updateAgent(ev);
+  else if (ev.type === 'log') {
+    const t = new Date(ev.t).toLocaleTimeString('es-CO');
+    els.logBox.textContent += `[${t}] ${ev.level.toUpperCase()}  ${ev.message}\n`;
+    els.logBox.scrollTop = els.logBox.scrollHeight;
+  }
+}
+
+/* ============================== Flujo principal ============================== */
+async function analyze() {
+  if (state.busy) return;
+  clearError();
+  if (!state.file) return showError('Selecciona un archivo CSV o Excel.');
+  const noAi = els.noAi.checked;
+  let apiKey = '';
+  if (!noAi) {
+    apiKey = (await loadApiKey()) || '';   // se lee del almacén cifrado solo al momento de usarla
+    if (!apiKey) {
+      refreshAiStatus();
+      return openAiDialog({ pending: true, message: 'Vincula tu API Key una sola vez para usar la IA. Después el análisis continuará solo.', kind: 'info' });
+    }
+  }
+
+  els.results.classList.add('hidden'); els.results.innerHTML = '';
+  destroyCharts(); els.summaryCard.classList.add('hidden');
+  resetPipeline(); state.controller = new AbortController(); state.result = null;
+  setBusy(true);
+  try {
+    const summary = await runWorker(state.file);
+    state.summary = summary;
+    setReadProgress(100, 'Lectura local completada.');
+    renderSummaryCard(summary);
+    const models = els.models.value.split(',').map((s) => s.trim()).filter(Boolean);
+    const orch = new AgentsOrchestrator({ apiKey, models, useAI: !noAi, onEvent, signal: state.controller.signal });
+    const result = await orch.run({ summary, userContext: els.context.value });
+    state.result = result;
+    renderResults(result);
+  } catch (e) {
+    if (e.aborted || e.code === 'aborted') showError('El análisis fue cancelado.');
+    else if (e.code === 'no_api_key') openAiDialog({ pending: true, message: 'Vincula tu API Key para usar la IA.', kind: 'info' });
+    else if (e.code === 'bad_key' || e.code === 'forbidden') showError(e.message, { offerKey: true, offerNoAi: true });
+    else showError(e.message || String(e));
+    console.error(e);
+  } finally {
+    setBusy(false);
+    if (state.worker) { state.worker.terminate(); state.worker = null; }
+  }
+}
+els.analyzeBtn.addEventListener('click', analyze);
+els.cancelBtn.addEventListener('click', () => {
+  if (state.controller) state.controller.abort();
+  if (state.worker) { state.worker.terminate(); state.worker = null; showError('El análisis fue cancelado.'); setBusy(false); }
+});
+
+/* ============================== Dashboard ============================== */
+const PRIO_UI = {
+  urgent: { border: 'border-red-500', bg: 'bg-red-500/10', chip: 'bg-red-600 text-white' },
+  important: { border: 'border-orange-500', bg: 'bg-orange-500/10', chip: 'bg-orange-500 text-white' },
+  watch: { border: 'border-sky-500', bg: 'bg-sky-500/10', chip: 'bg-sky-600 text-white' },
+};
+const RISK_UI = { low: 'bg-emerald-600', moderate: 'bg-amber-500', high: 'bg-orange-500', critical: 'bg-red-600' };
+const HEAT_CLS = { 3: 'bg-red-500/45', 2: 'bg-red-500/25', 1: 'bg-amber-400/30', 0: '', '-1': 'bg-emerald-500/20', '-2': 'bg-emerald-500/35' };
+const HORIZON = { inmediato: 'Inmediato', corto_plazo: 'Corto plazo', mediano_plazo: 'Mediano plazo' };
+const MODE = { ia: 'inteligencia artificial (Gemini)', reglas: 'reglas automáticas (sin IA)', mixto: 'inteligencia artificial y reglas de respaldo' };
+const capFirst = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+const card = (inner, extra = '', id = '') => `<section ${id ? `id="${id}"` : ''} class="rounded-2xl border border-line bg-surface p-5 ${extra}">${inner}</section>`;
+const secTitle = (t, sub = '') => `<h3 class="text-lg font-semibold">${esc(t)}</h3>${sub ? `<p class="mb-3 mt-0.5 text-sm text-muted">${esc(sub)}</p>` : '<div class="mb-3"></div>'}`;
+const legendHtml = (spec) => (spec.legend && spec.legend.length
+  ? `<div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">${spec.legend.map((l) => `<span class="inline-flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm" style="background:${esc(l.color)}"></span>${esc(l.label)}</span>`).join('')}</div>` : '');
+const chartFigure = (spec, canvasId, h = 'h-64') => `<figure class="rounded-xl border border-line bg-bg p-3">
+  <figcaption class="mb-2"><span class="text-sm font-semibold">${esc(spec.title)}</span><span class="mt-0.5 block text-xs text-muted">${esc(spec.subtitle || '')}</span></figcaption>
+  <div class="relative ${h}"><canvas id="${esc(canvasId)}" role="img" aria-label="${esc(spec.title)}"></canvas></div>${legendHtml(spec)}
+  ${spec.how ? `<p class="mt-2 text-[11px] italic text-muted">Cómo leerlo: ${esc(spec.how)}</p>` : ''}</figure>`;
+const evidenceList = (ev) => (ev && ev.length
+  ? `<details class="mt-3"><summary class="text-xs text-muted underline">Ver los datos que respaldan esto (${ev.length})</summary><ul class="mt-1 list-disc space-y-0.5 pl-5 text-xs text-muted">${ev.map((e) => `<li>${esc(e.label)}</li>`).join('')}</ul></details>` : '');
+
+function renderHeader(r) {
+  const m = r.meta, av = m.availability;
+  const pill = (on, label, off) => `<span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${on ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600' : 'border-line bg-soft text-muted'}">${on ? '●' : '○'} ${esc(on ? label : off)}</span>`;
+  return card(`
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div class="min-w-0">
+        <p class="text-xs font-semibold uppercase tracking-wide text-muted">Informe para decidir</p>
+        <h2 class="text-2xl font-bold leading-tight">${esc(m.title)}</h2>
+        ${m.subtitle ? `<p class="mt-1 text-sm text-muted">${esc(m.subtitle)}</p>` : ''}
+        <p class="mt-2 text-xs text-muted">Archivo <b class="text-ink">${esc(m.file_name)}</b> · ${fmt(m.rows)} registros · Sector: <b class="text-ink">${esc(m.sector || 'No determinado')}</b> · Análisis con ${esc(MODE[m.mode] || m.mode)}</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="pdfBtn" type="button" class="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:opacity-90"><span id="pdfSpin" class="spinner hidden"></span>Descargar informe PDF</button>
+        <button id="jsonBtn" type="button" class="rounded-lg border border-line px-4 py-2 text-sm hover:bg-soft">Descargar JSON</button>
+      </div>
+    </div>
+    <div class="mt-4 flex flex-wrap items-center gap-2">
+      ${pill(av.has_quantitative, 'Se analizaron los números', 'Sin datos numéricos')}
+      ${pill(av.has_qualitative, 'Se analizaron los comentarios', 'Sin comentarios')}
+      ${pill(av.cross_analysis_possible, 'Números y comentarios cruzados', 'Sin cruce posible')}
+      <span class="ml-auto inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold text-white ${RISK_UI[m.overall_risk] || 'bg-slate-500'}">Situación general: ${esc(m.risk_label)}</span>
+    </div>`);
+}
+
+function renderNotices(r) {
+  if (!r.notices.length) return '';
+  return card(`
+    <div class="flex items-start gap-3"><span class="text-xl" aria-hidden="true">⚠️</span><div class="min-w-0">
+      <h3 class="text-base font-semibold">Alcance del análisis: faltan datos para un cruce completo</h3>
+      ${r.notices.map((n) => `<p class="mt-2 text-sm"><b>${esc(n.title)}.</b> ${esc(n.text)}</p>`).join('')}
+      ${r.additional_data.length ? `<p class="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">Datos que conviene recolectar</p><ul class="mt-1 list-disc space-y-1 pl-5 text-sm">${r.additional_data.map((d) => `<li><b>${esc(d.data)}</b>${d.purpose ? ` — ${esc(d.purpose)}` : ''}</li>`).join('')}</ul>` : ''}
+    </div></div>`, 'border-amber-500/50 bg-amber-500/5');
+}
+
+function renderSummary(r) {
+  const s = r.summary;
+  return card(`${secTitle('Lo que revelan los datos')}
+    <p class="text-sm font-medium leading-relaxed">${esc(s.lead)}</p>
+    ${s.headline ? `<p class="mt-3 rounded-lg bg-brand/10 p-3 text-sm font-semibold text-brand">${esc(s.headline)}</p>` : ''}
+    <div class="prose-p mt-3 text-sm">${s.paragraphs.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
+    ${s.key_messages.length ? `<p class="mt-1 text-xs font-semibold uppercase tracking-wide text-muted">Mensajes clave</p><ul class="mt-1 list-disc space-y-1 pl-5 text-sm">${s.key_messages.map((k) => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}`);
+}
+
+function renderFocus(r) {
+  if (!r.focus.length) return '';
+  return card(`${secTitle('En qué enfocarse')}<div class="grid gap-3 md:grid-cols-${Math.min(3, r.focus.length)}">${r.focus.map((f, i) => `
+    <div class="rounded-xl border border-line bg-bg p-4">
+      <div class="flex items-center gap-2"><span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand text-sm font-bold text-brand-ink">${i + 1}</span><h4 class="text-sm font-semibold leading-snug">${esc(f.title)}</h4></div>
+      <p class="mt-2 text-sm text-muted">${esc(f.why)}</p>
+    </div>`).join('')}</div>`);
+}
+
+function alertCard(a) {
+  const u = PRIO_UI[a.priority] || PRIO_UI.watch;
+  return `<article id="alert_${esc(a.id)}" class="scroll-mt-4 rounded-xl border-l-4 ${u.border} ${u.bg} p-4">
+    <div class="grid gap-4 ${a.chart ? 'lg:grid-cols-2' : ''}">
+      <div class="min-w-0">
+        <div class="flex flex-wrap items-center gap-2"><span class="rounded-full px-2.5 py-0.5 text-[11px] font-bold ${u.chip}">${esc(a.priorityLabel)}</span><span class="text-xs text-muted">${esc(a.kindLabel)}${a.group ? ` · ${esc(a.group)}` : ''}</span></div>
+        <h4 class="mt-2 text-base font-semibold leading-snug">${esc(a.title)}</h4>
+        <p class="mt-2 text-sm leading-relaxed">${esc(a.found)}</p>
+        ${a.why ? `<p class="mt-3 text-sm"><b>Por qué importa:</b> ${esc(a.why)}</p>` : ''}
+        ${a.todo ? `<p class="mt-2 text-sm"><b>Qué hacer:</b> ${esc(a.todo)}</p>` : ''}
+        ${evidenceList(a.evidence)}
+      </div>
+      ${a.chart ? chartFigure(a.chart, `cv_${a.id}`) : ''}
+    </div>
+  </article>`;
+}
+
+function renderAlerts(r) {
+  if (!r.alerts.length) {
+    return card(`${secTitle('Alertas')}<p class="rounded-lg bg-emerald-500/10 p-3 text-sm">No se encontraron señales de atención relevantes con los datos disponibles. Conviene repetir el análisis periódicamente para detectar cambios a tiempo.</p>`);
+  }
+  const more = r.more_alerts.length
+    ? `<details class="mt-4 rounded-lg border border-line p-3"><summary class="text-sm font-medium">Otras señales de menor prioridad (${r.more_alerts.length})</summary><ul class="mt-2 space-y-2">${r.more_alerts.map((a) => `<li class="text-sm"><b>${esc(a.title)}.</b> <span class="text-muted">${esc(a.found)}</span></li>`).join('')}</ul></details>` : '';
+  return card(`${secTitle('Alertas: qué atender y por qué', r.intros.alerts || 'Cada alerta incluye el gráfico que mejor la muestra.')}
+    ${r.intros.cross && r.alerts.some((a) => a.kind === 'cross') ? `<p class="mb-3 rounded-lg bg-soft p-3 text-xs text-muted">${esc(r.intros.cross)}</p>` : ''}
+    <div class="space-y-4">${r.alerts.map(alertCard).join('')}</div>${more}`);
+}
+
+function renderHeatmap(r) {
+  const h = r.heatmap;
+  if (!h) return '';
+  return card(`${secTitle(`Mapa de atención por ${h.dimension.toLowerCase()}`, 'Cada fila es un grupo y cada columna un indicador. Los grupos que requieren más atención aparecen primero.')}
+    <div class="overflow-x-auto"><table class="tbl">
+      <thead><tr><th>${esc(capFirst(h.dimension))}</th><th>Registros</th>${h.columns.map((c) => `<th style="white-space:normal;min-width:96px">${esc(c.label)}</th>`).join('')}</tr></thead>
+      <tbody>${h.rows.map((row) => `<tr><td class="font-medium">${esc(row.group)}</td><td>${fmt(row.n)}</td>${row.cells.map((c) => `<td class="text-center ${HEAT_CLS[c.level] || ''}">${esc(c.display)}</td>`).join('')}</tr>`).join('')}</tbody>
+      <tfoot><tr class="font-semibold"><td>Total</td><td></td>${h.total.map((t) => `<td class="text-center">${esc(t)}</td>`).join('')}</tr></tfoot>
+    </table></div>
+    <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
+      <span class="inline-flex items-center gap-1.5"><span class="inline-block h-3 w-5 rounded-sm bg-red-500/45"></span>Se aleja del resto de forma desfavorable</span>
+      <span class="inline-flex items-center gap-1.5"><span class="inline-block h-3 w-5 rounded-sm bg-amber-400/30"></span>Algo por encima de lo habitual</span>
+      <span class="inline-flex items-center gap-1.5"><span class="inline-block h-3 w-5 rounded-sm bg-emerald-500/35"></span>Se destaca de forma favorable</span>
+      <span class="inline-flex items-center gap-1.5"><span class="inline-block h-3 w-5 rounded-sm border border-line"></span>Dentro de lo habitual</span>
+    </div>`);
+}
+
+/* ---- Explorador de indicadores: lista desplegable generada a partir del análisis de los agentes ---- */
+function renderExplorer(r) {
+  if (!r.indicators.length) return '';
+  const groups = new Map();
+  r.indicators.forEach((i) => { if (!groups.has(i.categoryLabel)) groups.set(i.categoryLabel, []); groups.get(i.categoryLabel).push(i); });
+  const opts = [...groups.entries()].map(([label, list]) => `<optgroup label="${esc(label)}">${list.map((i) => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('')}</optgroup>`).join('');
+  const sug = r.suggested_indicators.map((id) => r.indicators.find((i) => i.id === id)).filter(Boolean);
+  const selCls = 'mt-1 w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand disabled:opacity-60';
+  return card(`${secTitle('Explora un indicador', r.intros.indicators || 'Elige un indicador para ver su valor, cómo se comporta en cada grupo y qué significa.')}
+    <div class="grid gap-3 sm:grid-cols-2">
+      <label class="block text-xs font-medium">Indicador<select id="indSel" class="${selCls}">${opts}</select></label>
+      <label class="block text-xs font-medium">Ver por<select id="dimSel" class="${selCls}"></select></label>
+    </div>
+    ${sug.length ? `<div class="mt-3 flex flex-wrap items-center gap-2 text-xs"><span class="text-muted">Sugeridos por el análisis:</span>${sug.map((i) => `<button type="button" data-ind="${esc(i.id)}" class="rounded-full border border-line px-3 py-1 hover:bg-soft">${esc(i.name)}</button>`).join('')}</div>` : ''}
+    <div id="indPanel" class="mt-5"></div>`, '', 'explorer');
+}
+
+function indicatorPanel(ind, dim) {
+  const specs = [];
+  const suffix = ind.unit === 'pct' ? '%' : '';
+  let figs = '';
+  if (dim) {
+    const spec = barsSpec({
+      id: 'ex_g', title: `${ind.name} por ${dim.dimension.toLowerCase()}`, subtitle: `La línea punteada marca el total (${ind.value}).`, rows: dim.rows,
+      reference: { label: 'Total', value: ind.reference }, suffix, polarity: ind.polarity,
+    });
+    spec.how = 'Cada barra es un grupo. Las barras de color señalan los grupos que se alejan del resto.';
+    specs.push(['cv_ex_g', spec]); figs += chartFigure(spec, 'cv_ex_g', 'h-72');
+  }
+  if (ind.trend) {
+    const t = lineSpec({ id: 'ex_t', title: 'Evolución mensual', subtitle: ind.trend.text, labels: ind.trend.labels, values: ind.trend.values, suffix });
+    t.how = 'Cada punto es un mes: mira si la línea sube, baja o se mantiene.';
+    specs.push(['cv_ex_t', t]); figs += chartFigure(t, 'cv_ex_t', 'h-56');
+  }
+  if (!figs) figs = '<p class="rounded-xl border border-dashed border-line p-4 text-sm text-muted">Este indicador no se puede comparar entre grupos con los datos disponibles.</p>';
+  const nTxt = ind.source === 'comments' ? `según una selección de ${fmt(ind.n)} comentarios` : `calculado con ${fmt(ind.n)} registros`;
+  const block = (label, text) => (text ? `<div><p class="text-xs font-semibold uppercase tracking-wide text-muted">${label}</p><p class="text-sm leading-relaxed">${esc(text)}</p></div>` : '');
+  const html = `<div class="grid gap-5 lg:grid-cols-5">
+    <div class="space-y-3 lg:col-span-2">
+      <p class="text-xs font-medium text-muted">${esc(ind.categoryLabel)}</p>
+      <p class="text-4xl font-bold text-brand">${esc(ind.value)}</p>
+      <p class="text-xs text-muted">${nTxt}</p>
+      ${block('Qué mide', ind.what)}${block('Cómo leerlo', ind.how)}${block('Qué muestran los datos', ind.reading)}
+      ${ind.quotes && ind.quotes.length ? `<div><p class="text-xs font-semibold uppercase tracking-wide text-muted">Lo que dicen las personas</p>${ind.quotes.map((q) => `<p class="mt-1 text-sm italic text-muted">“${esc(q.text)}”${q.group ? ` — ${esc(q.group)}` : ''}</p>`).join('')}</div>` : ''}
+      ${ind.related.length ? `<div><p class="text-xs font-semibold uppercase tracking-wide text-muted">Aparece en estas alertas</p><div class="mt-1 flex flex-wrap gap-2">${ind.related.map((a) => `<a href="#alert_${esc(a.id)}" class="rounded-full border border-line px-2.5 py-1 text-xs hover:bg-soft">${esc(a.title)}</a>`).join('')}</div></div>` : ''}
+    </div>
+    <div class="space-y-4 lg:col-span-3">${figs}</div>
+  </div>`;
+  return { html, specs };
+}
+
+function initExplorer(r) {
+  const sel = $('indSel'), dimSel = $('dimSel'), panel = $('indPanel');
+  if (!sel) { state.explorer = null; return; }
+  let lastId = null;
+  const show = (id, dimName) => {
+    const ind = r.indicators.find((i) => i.id === id) || r.indicators[0];
+    if (!ind) return;
+    if (ind.id !== lastId) {
+      dimSel.innerHTML = ind.byDimension.length ? ind.byDimension.map((d) => `<option value="${esc(d.dimension)}">${esc(capFirst(d.dimension))}</option>`).join('') : '<option value="">(sin comparación por grupos)</option>';
+      lastId = ind.id;
+    }
+    dimSel.disabled = ind.byDimension.length <= 1;
+    const dim = ind.byDimension.find((d) => d.dimension === (dimName || dimSel.value)) || ind.byDimension[0] || null;
+    if (dim) dimSel.value = dim.dimension;
+    sel.value = ind.id;
+    const { html, specs } = indicatorPanel(ind, dim);
+    panel.innerHTML = html;
+    state.explorer = { specs };
+    drawExplorerCharts();
+  };
+  sel.addEventListener('change', () => show(sel.value));
+  dimSel.addEventListener('change', () => show(sel.value, dimSel.value));
+  state.explorerSelect = (id) => { show(id); const el = $('explorer'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  show(r.suggested_indicators[0] || r.indicators[0].id);
+}
+
+function renderPlan(r) {
+  const p = r.plan;
+  if (!p.urgent.length && !p.monitor.length && !p.prevent.length) return '';
+  const col = (heading, intro, color, items) => (items.length ? `<div class="rounded-xl border border-line bg-bg p-4">
+      <h4 class="text-sm font-bold ${color}">${esc(heading)}</h4>${intro ? `<p class="mb-3 mt-1 text-xs text-muted">${esc(intro)}</p>` : '<div class="mb-3"></div>'}
+      <ul class="space-y-3">${items.join('')}</ul></div>` : '');
+  const urgent = p.urgent.map((x) => `<li class="rounded-lg border border-line bg-surface p-3"><p class="text-sm font-semibold">${esc(x.action)}</p>${x.why ? `<p class="mt-1 text-xs text-muted">Por qué: ${esc(x.why)}</p>` : ''}<p class="mt-1 text-xs"><b>Quién:</b> ${esc(x.owner || '—')} · <b>Cuándo:</b> ${esc(x.when || '—')}</p></li>`);
+  const monitor = p.monitor.map((x) => `<li class="rounded-lg border border-line bg-surface p-3"><p class="text-sm font-semibold">${esc(x.what)}</p>
+    ${x.indicator ? `<p class="mt-1 text-xs">Hoy: <b>${esc(x.indicator.value)}</b> · <button type="button" data-ind="${esc(x.indicator.id)}" class="underline">ver el indicador</button></p>` : ''}
+    ${x.react_if ? `<p class="mt-1 text-xs text-muted">Cuándo actuar: ${esc(x.react_if)}</p>` : ''}${x.how_often ? `<p class="mt-1 text-xs"><b>Cada cuánto:</b> ${esc(x.how_often)}</p>` : ''}</li>`);
+  const prevent = p.prevent.map((x) => `<li class="rounded-lg border border-line bg-surface p-3"><p class="text-sm font-semibold">${esc(x.measure)}</p>${x.why ? `<p class="mt-1 text-xs text-muted">${esc(x.why)}</p>` : ''}<p class="mt-1 text-xs"><b>Horizonte:</b> ${esc(HORIZON[x.horizon] || x.horizon)}</p></li>`);
+  return card(`${secTitle('Plan de acción', 'Qué resolver con urgencia, qué vigilar y qué medidas preventivas o estratégicas conviene tomar.')}
+    <div class="grid gap-4 lg:grid-cols-3">
+      ${col('Resolver con urgencia', r.intros.urgent, 'text-red-600', urgent)}${col('Qué monitorear', r.intros.monitor, 'text-amber-600', monitor)}${col('Medidas preventivas y estratégicas', r.intros.prevent, 'text-emerald-600', prevent)}
+    </div>`);
+}
+
+function renderLimits(r) {
+  const q = r.meta.quality;
+  const items = [
+    `Se analizaron ${fmt(r.meta.rows)} registros del archivo «${r.meta.file_name}».`,
+    q.missing_overall_pct > 0 ? `Alrededor del ${fmt(q.missing_overall_pct, 1)}% de las celdas estaba vacío; esos datos no se inventaron ni se completaron.` : null,
+    q.pii_masked ? `Se protegieron ${q.pii_masked} ${q.pii_masked === 1 ? 'columna' : 'columnas'} con datos personales y los comentarios se anonimizaron antes de analizarlos.` : 'Los comentarios se anonimizaron antes de analizarlos.',
+    'Los grupos con menos de 5 registros se agrupan para proteger la privacidad de las personas.',
+    ...r.limitations.other,
+  ].filter(Boolean);
+  return card(`${secTitle('Sobre estos datos y sus límites')}<ul class="list-disc space-y-1 pl-5 text-sm">${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
+    ${r.closing ? `<p class="mt-4 text-sm italic text-muted">${esc(r.closing)}</p>` : ''}`);
+}
+
+function renderAnnex(result) {
+  const r = result.report, t = r.annex, tr = r.traceability;
+  const sections = [];
+  const tbl = (head, rows) => `<div class="overflow-x-auto"><table class="tbl"><thead><tr>${head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+  if (t.quant_findings.length) {
+    sections.push(`<h4 class="mt-4 mb-2 font-semibold">Hallazgos de los números (Agente 2)</h4>${tbl(['Importancia', 'Hallazgo', 'Datos'], t.quant_findings.map((f) => `<tr><td>${esc(f.severity)}</td><td><b>${esc(f.title)}</b><br>${esc(f.statement)}</td><td class="text-xs text-muted">${f.evidence.map((e) => esc(e.label)).join('<br>')}</td></tr>`))}`);
+  }
+  if (t.qual_themes.length) {
+    sections.push(`<h4 class="mt-4 mb-2 font-semibold">Temas de los comentarios (Agente 3)</h4>${tbl(['Tema', '% de comentarios', '% con tono negativo', 'Descripción y citas anonimizadas'], t.qual_themes.map((q) => `<tr><td><b>${esc(q.label)}</b></td><td>${fmt(q.pct_of_classified, 1)}%</td><td>${fmt(q.negative_pct, 0)}%</td><td>${esc(q.description || '')}${q.quotes.map((c) => `<div class="mt-1 text-xs italic text-muted">“${esc(c.text)}”${c.group ? ` — ${esc(c.group)}` : ''}</div>`).join('')}</td></tr>`))}`);
+  }
+  if (r.alerts.some((a) => a.chartReason)) {
+    sections.push(`<h4 class="mt-4 mb-2 font-semibold">Por qué la IA eligió cada gráfico</h4><ul class="list-disc space-y-1 pl-5 text-xs text-muted">${r.alerts.filter((a) => a.chartReason).map((a) => `<li><b>${esc(a.title)}:</b> ${esc(a.chartReason)}</li>`).join('')}</ul>`);
+  }
+  sections.push(`<h4 class="mt-4 mb-2 font-semibold">Estado de los agentes</h4>${tbl(['Agente', 'Estado', 'Modo', 'Modelo', 'Tiempo', 'Tokens (entrada/salida)'], Object.entries(tr.agents).map(([k, v]) => `<tr><td>${esc(AGENT_INFO[k]?.name || k)}</td><td>${esc(STATUS_UI[v.status]?.[0] || v.status)}${v.reason ? `<br><span class="text-xs text-muted">${esc(v.reason)}</span>` : ''}</td><td>${esc(v.mode || '—')}</td><td>${esc(v.model || '—')}</td><td>${v.duration_ms ? (v.duration_ms / 1000).toFixed(1) + ' s' : '—'}</td><td>${fmt(v.tokens_in)} / ${fmt(v.tokens_out)}</td></tr>`))}
+    <p class="mt-2 text-xs text-muted">Enrutamiento: números = <b>${tr.routing.has_quantitative}</b> (la IA indicó ${tr.routing.ai_has_quantitative}) · comentarios = <b>${tr.routing.has_qualitative}</b> (la IA indicó ${tr.routing.ai_has_qualitative}). Ejecución <code>${esc(tr.run_id)}</code>.</p>
+    ${tr.routing.overrides.length ? `<ul class="mt-1 list-disc pl-5 text-xs text-amber-600">${tr.routing.overrides.map((o) => `<li>${esc(o)}</li>`).join('')}</ul>` : ''}`);
+  if (r.warnings.length) sections.push(`<h4 class="mt-4 mb-2 font-semibold">Avisos de la ejecución</h4><ul class="list-disc space-y-1 pl-5 text-xs text-muted">${r.warnings.map((w) => `<li><b>${esc(AGENT_INFO[w.agent]?.short || w.agent)}</b>: ${esc(w.message)}</li>`).join('')}</ul>`);
+  return `<details class="rounded-2xl border border-line bg-surface p-5"><summary class="text-base font-semibold">Anexo técnico (para quien quiera ver el detalle)</summary>${sections.join('')}</details>`;
+}
+
+let resultsBound = false;
+function renderResults(result) {
+  const r = result.report;
+  const parts = [renderHeader(r), renderNotices(r), renderSummary(r), renderFocus(r), renderAlerts(r), renderHeatmap(r), renderExplorer(r), renderPlan(r), renderLimits(r), renderAnnex(result)];
+  els.results.innerHTML = parts.filter(Boolean).join('');
+  els.results.classList.remove('hidden');
+  renderAlertCharts(r);
+  initExplorer(r);
+  $('pdfBtn').addEventListener('click', downloadPdf);
+  $('jsonBtn').addEventListener('click', downloadJson);
+  if (!resultsBound) {
+    // Los botones «ver el indicador» (plan de acción y sugeridos) abren el explorador con ese indicador
+    els.results.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-ind]');
+      if (b && state.explorerSelect) state.explorerSelect(b.dataset.ind);
+    });
+    resultsBound = true;
+  }
+  els.results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ============================== Gráficos del dashboard ============================== */
+function cssTheme() {
+  const v = (n) => `rgb(${getComputedStyle(document.documentElement).getPropertyValue(n).trim().split(/\s+/).join(',')})`;
+  return { text: v('--c-ink'), muted: v('--c-muted'), grid: v('--c-line'), bg: v('--c-surface') };
+}
+function destroyList(list) { list.forEach((c) => c.destroy()); list.length = 0; }
+function destroyCharts() { destroyList(state.charts); destroyList(state.exCharts); }
+function drawChart(canvasId, spec, list) {
+  const cv = $(canvasId);
+  if (!cv || !window.Chart) return;
+  try { list.push(new window.Chart(cv, chartConfig(spec, cssTheme()))); } catch (e) { console.warn('Gráfico no renderizado', spec.id, e); }
+}
+function renderAlertCharts(r) {
+  destroyList(state.charts);
+  for (const a of r.alerts) if (a.chart) drawChart(`cv_${a.id}`, a.chart, state.charts);
+}
+function drawExplorerCharts() {
+  destroyList(state.exCharts);
+  (state.explorer?.specs || []).forEach(([id, spec]) => drawChart(id, spec, state.exCharts));
+}
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (!state.result) return;
+  renderAlertCharts(state.result.report);
+  drawExplorerCharts();
+});
+
+/* ============================== Descargas ============================== */
+async function downloadPdf() {
+  const btn = $('pdfBtn'), spin = $('pdfSpin');
+  btn.disabled = true; spin.classList.remove('hidden');
+  try { await exportReportPDF(state.result.report); }
+  catch (e) { showError('No se pudo generar el PDF: ' + (e.message || e)); console.error(e); }
+  finally { btn.disabled = false; spin.classList.add('hidden'); }
+}
+function downloadJson() {
+  const { agents, report, routing, usage, log, run_id } = state.result;
+  const blob = new Blob([JSON.stringify({ run_id, routing, usage, agents, report, log }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `ejecucion_${run_id}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// Exposición mínima para depuración/pruebas desde la consola del navegador
+window.__th = { state, analyze, setFile };
+</script>
+</body>
+</html>
